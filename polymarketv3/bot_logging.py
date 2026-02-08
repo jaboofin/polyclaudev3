@@ -17,6 +17,7 @@ Call setup_logging() once at bot startup (main.py or auto_trader.py).
 """
 
 import os
+import sys
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -53,6 +54,11 @@ def setup_logging(
     root.setLevel(logging.DEBUG)  # Capture everything; handlers filter
 
     # Console handler — clean, human-readable
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")
+        except AttributeError:
+            pass
     console = logging.StreamHandler()
     console.setLevel(getattr(logging, level, logging.INFO))
     console_fmt = logging.Formatter(
