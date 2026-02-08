@@ -145,12 +145,15 @@ All state auto-saves to a local SQLite database:
 
 ## 📈 Trading Strategies
 
-| Strategy | Take Profit | Stop Loss | Sports Max | Crypto Max | Force Sell |
-|----------|-------------|-----------|------------|------------|------------|
-| 🛡️ **Conservative** | +25% | -10% | 2 days | 5 days | 24h |
-| ⚖️ **Balanced** | +35% | -15% | 3 days | 7 days | 36h |
-| 🔥 **Aggressive** | +75% | -25% | 5 days | 14 days | 48h |
-| ⚡ **Scalper** | +15% | -8% | 1 day | 2 days | 12h |
+The dashboard currently ships with these strategy presets:
+
+| Strategy | Take Profit % | Stop Loss % | Trailing Stop % |
+|----------|---------------|-------------|-----------------|
+| 🛡️ **Conservative** | 30 | 10 | — |
+| ⚖️ **Balanced** | 50 | 25 | — |
+| 🔥 **Aggressive** | 100 | 50 | — |
+| 📈 **Trailing Stop** | — | — | 20 |
+| 🎯 **Custom** | user-defined | user-defined | user-defined |
 
 ---
 
@@ -374,4 +377,3 @@ Copy `.env.example` → `.env` and edit.
   - tracking fills
   - printing dashboard/state
   - allowing SELL exits (manual or TP/SL)
-
