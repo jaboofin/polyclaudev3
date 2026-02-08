@@ -145,12 +145,15 @@ All state auto-saves to a local SQLite database:
 
 ## 📈 Trading Strategies
 
-| Strategy | Take Profit | Stop Loss | Sports Max | Crypto Max | Force Sell |
-|----------|-------------|-----------|------------|------------|------------|
-| 🛡️ **Conservative** | +25% | -10% | 2 days | 5 days | 24h |
-| ⚖️ **Balanced** | +35% | -15% | 3 days | 7 days | 36h |
-| 🔥 **Aggressive** | +75% | -25% | 5 days | 14 days | 48h |
-| ⚡ **Scalper** | +15% | -8% | 1 day | 2 days | 12h |
+The dashboard currently ships with these strategy presets:
+
+| Strategy | Take Profit % | Stop Loss % | Trailing Stop % |
+|----------|---------------|-------------|-----------------|
+| 🛡️ **Conservative** | 15 | 5 | — |
+| ⚖️ **Balanced** | 25 | 10 | — |
+| 🔥 **Aggressive** | 40 | 20 | — |
+| 📈 **Trailing Stop** | — | — | 10 |
+| 🎯 **Custom** | user-defined | user-defined | user-defined |
 
 ---
 
@@ -174,13 +177,19 @@ PRIVATE_KEY=your_private_key_here
 FUNDER_ADDRESS=0xYourAddress
 
 # Trading limits
-MAX_TRADE_SIZE=10
-MAX_TOTAL_EXPOSURE=100
+MAX_TRADE_SIZE=5
+MAX_TOTAL_EXPOSURE=25
 ```
 
 Optional: override the database path:
 ```env
 BOT_DB_PATH=/path/to/custom/bot_data.db
+```
+
+Recommended first-run safety caps:
+```env
+MAX_DAILY_LOSS_USD=25
+MAX_DRAWDOWN_PCT=15
 ```
 
 ---
@@ -374,4 +383,3 @@ Copy `.env.example` → `.env` and edit.
   - tracking fills
   - printing dashboard/state
   - allowing SELL exits (manual or TP/SL)
-
