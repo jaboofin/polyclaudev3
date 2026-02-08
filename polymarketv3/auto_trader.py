@@ -1206,7 +1206,7 @@ if __name__ == "__main__":
     logger.info("  4. aggressive")
     logger.info("  5. scalper   - Quick same-day trades")
     logger.info("  6. sports    - Tonight's games only 🏀")
-    logger.info()
+    logger.info("")
     
     try:
         bankroll = float(input("Enter bankroll amount [$50]: ") or "50")

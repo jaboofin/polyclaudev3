@@ -41,6 +41,11 @@ python auto_trader.py
 
 That's it! The bot runs fully automatically.
 
+You can also launch the live AutoTrader via the CLI:
+```bash
+python main.py --mode trade
+```
+
 ---
 
 ## 📁 Project Structure
