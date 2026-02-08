@@ -1,0 +1,29 @@
+# Polymarket Official Client
+py-clob-client>=0.34.0
+
+# HTTP Requests
+requests>=2.31.0
+aiohttp>=3.9.0
+
+# WebSocket for real-time data
+websockets>=12.0
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Data handling
+pandas>=2.0.0
+
+# CLI interface
+rich>=13.0.0
+click>=8.1.0
+
+# Async support
+asyncio-throttle>=1.0.2
+
+# Scheduling
+schedule>=1.2.0
+
+# Dashboard (Streamlit)
+streamlit>=1.30.0
+plotly>=5.18.0
