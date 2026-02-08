@@ -205,137 +205,26 @@ MAX_DRAWDOWN_PCT=15
 
 ## ✅ Completed Improvements
 
-All identified critical issues have been addressed. Here's what was done:
+All previously identified issues are resolved. Summary of what changed:
 
----
+### ✅ Priority 1: Real edge models (DONE)
+- Added a pluggable `models/` framework (manual, odds API, momentum) for probability estimates.
+- Value bets now choose the highest-confidence model per market and require edge > `min_edge%`.
+- Momentum uses real price-history deltas; arbitrage uses the live CLOB orderbook.
+- MIXED only combines arbitrage + model value + momentum; favorites/underdogs remain but warn they lack edge detection.
 
-### ✅ Priority 1: Replace Placeholder Strategies with Real Edge Models — DONE
+### ✅ Priority 2: Order lifecycle tracking (DONE)
+- Added `order_tracker.py` to track orders through fills (including partial fills).
+- Positions are only created on confirmed fills; pending orders are persisted in SQLite.
+- `order_manager.py` and `auto_trader.py` now start/stop the tracker automatically.
 
-**Status:** Completed. All strategy methods now use real probability models instead of flawed heuristics.
+### ✅ Priority 3: API rate limiting (DONE)
+- Added a `RateLimitedClient` wrapper in `client_manager.py` for all API calls.
+- Thread-safe global limit (default 10 rps, configurable via `API_RATE_LIMIT`).
 
-**What changed:**
-
-- **New `models/` directory** with a pluggable probability model framework:
-  - `models/base.py` — `ProbabilityModel` abstract base class and `ProbabilityEstimate` dataclass with edge/EV calculations
-  - `models/odds_api.py` — `OddsApiModel` fetches bookmaker consensus from [the-odds-api.com](https://the-odds-api.com) and compares against Polymarket prices for sports markets
-  - `models/manual.py` — `ManualModel` for user-supplied probability estimates (from code or JSON file)
-  - `models/momentum.py` — `MomentumModel` detects real price trends from stored price history via `db.get_price_history()`
-
-- **`find_value_bets()`** now queries all active models, takes the highest-confidence estimate per market, and only bets when model edge > `min_edge%`. No more "high volume = underpriced" nonsense.
-
-- **`find_momentum_bets()`** now uses actual price deltas over configurable time windows with consistency checks (>60% of sub-intervals must agree on direction). Requires price snapshots to accumulate.
-
-- **`find_arbitrage_bets()`** now calls `ArbitrageDetector.check_market()` which queries the live CLOB orderbook (best ask prices), not stale Gamma API prices.
-
-- **`MIXED` strategy** now only combines arbitrage + model-backed value + momentum (no more favorites/underdogs which lack edge detection).
-
-- **`favorites`/`underdogs`** strategies kept but carry docstring warnings that they do NOT detect real edge.
-
-**How to use the models:**
-
-```python
-# Option 1: Supply your own probabilities
-from models import ManualModel
-manual = ManualModel()
-manual.set_estimate("market-slug", fair_yes=0.72, reason="My ELO model says 72%")
-bot = AutoTrader(config=my_config, models=[manual])
-
-# Option 2: Load from JSON file (set MANUAL_ESTIMATES_FILE in .env)
-# File format: {"estimates": {"market-slug": {"fair_yes": 0.72, "reason": "..."}}}
-
-# Option 3: Use sports bookmaker consensus (set ODDS_API_KEY in .env)
-# The OddsApiModel loads automatically when the key is present
-
-# Option 4: Momentum (always active, improves as price history accumulates)
-# Just run the bot — odds_tracker saves snapshots → momentum model reads them
-```
-
----
-
-### ✅ Priority 2: Fix Order Lifecycle Tracking — DONE
-
-**Status:** Completed. Orders are now tracked from placement through fill confirmation. Positions are only created on confirmed fills.
-
-**What changed:**
-
-- **New `order_tracker.py`** module with `OrderTracker` class:
-  - Tracks orders from `LIVE` → `PARTIALLY_FILLED` → `MATCHED` (or `CANCELLED`/`EXPIRED`)
-  - Polls `client.get_order(order_id)` in a background thread to detect fills
-  - Fires `on_fill` callback with actual fill price and size — this is what updates the portfolio
-  - Handles partial fills incrementally (each fill chunk updates the position separately)
-  - Persists tracked orders to `pending_orders` table in SQLite → survives bot restarts
-  - Stale order timeout (default 30 min) auto-cancels tracking for unfilled orders
-
-- **Updated `trader.py`**: `buy()` no longer calls `portfolio.add_position()` immediately. It returns the order ID, and the caller is responsible for tracking it.
-
-- **Updated `order_manager.py`**:
-  - Creates `OrderTracker` with fill/cancel callbacks wired to `portfolio.add_position()`
-  - `buy()` method now calls `order_tracker.track_order()` instead of adding phantom positions
-  - `start_monitoring()` and `stop_monitoring()` also start/stop the fill tracker
-  - Status display shows pending fill count
-
-- **Updated `auto_trader.py`**: `run()` starts and stops the order tracker automatically.
-
-- **Updated `persistence.py`**: New `pending_orders` table with full lifecycle state tracking.
-
-**The old flow (broken):**
-```
-post_order() success → portfolio.add_position(limit_price)  ← WRONG: assumes instant fill
-```
-
-**The new flow (correct):**
-```
-post_order() success → order_tracker.track(order_id)
-                          ↓ (background polling)
-                       get_order(order_id) → status check
-                          ↓ (on confirmed fill)
-                       on_fill callback → portfolio.add_position(actual_fill_price)
-```
-
----
-
-### ✅ Priority 3: Add Rate Limiting on API Calls — DONE
-
-**Status:** Completed. All API calls are now globally rate-limited via a transparent proxy in `client_manager.py`.
-
-**What changed:**
-
-- **`RateLimitedClient`** wrapper in `client_manager.py` intercepts all API methods (`get_order_book`, `get_midpoint`, `post_order`, etc.) and enforces a minimum interval between calls. Non-API attribute access passes through instantly.
-- Both `clients.read` and `clients.auth` are automatically wrapped — every module in the codebase gets rate limiting for free with **zero code changes** to consuming modules.
-- Thread-safe: uses a lock to ensure the global rate limit is respected even when multiple threads (order tracker, TP/SL monitor, arbitrage scanner) make concurrent calls.
-- Default: 10 requests/second. Override via `API_RATE_LIMIT` env var.
-- Call counter available via `clients.read.api_call_count` for diagnostics.
-
----
-
-### ✅ Priority 4: Replace print() with Proper Logging — DONE
-
-**Status:** Completed. All core modules now use Python's `logging` module with file + console output.
-
-**What changed:**
-
-- **New `bot_logging.py`** module:
-  - `setup_logging()` configures root logger with console (INFO+) and rotating file handler (DEBUG+)
-  - File handler: `bot.log`, 10MB max with 3 backups (all configurable via env vars)
-  - Console: `HH:MM:SS [LEVEL] module: message` format
-  - File: full timestamp + filename:lineno for debugging
-  - Idempotent — safe to call multiple times
-
-- **All 10 core modules converted** from `print()` to `logger.info/warning/error()`:
-  - `client_manager.py`, `persistence.py`, `arbitrage.py`, `odds_tracker.py`
-  - `order_tracker.py`, `order_manager.py`, `trader.py`, `portfolio.py`
-  - `auto_trader.py`, `market_fetcher.py`
-  - Each module uses `logger = logging.getLogger(__name__)` for per-module filtering
-
-- **Entry points** (`main.py`, `auto_trader.py` `__main__`) call `setup_logging()` at startup
-
-- **Configurable via `.env`:**
-  - `BOT_LOG_FILE` — log file path (default: `bot.log`, empty to disable)
-  - `BOT_LOG_LEVEL` — console verbosity (DEBUG/INFO/WARNING/ERROR)
-  - `BOT_LOG_MAX_MB` — max file size before rotation (default: 10)
-  - `BOT_LOG_BACKUPS` — rotated files to keep (default: 3)
-
-- **CLI/interactive files** (`easy_trade.py`, `main.py`, `dashboard.py`) kept `print()` for user-facing menu output where logging formatting would hurt readability.
+### ✅ Priority 4: Proper logging (DONE)
+- Introduced `bot_logging.py` with console + rotating file logs.
+- Core modules now use `logging`; CLI-style files keep `print()` for readability.
 
 ---
 
