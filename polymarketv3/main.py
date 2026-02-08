@@ -23,6 +23,7 @@ from odds_tracker import OddsTracker
 from portfolio import PortfolioManager
 from arbitrage import ArbitrageDetector
 from trader import Trader, StrategyExecutor
+from auto_trader import AutoTrader, AutoTradeConfig, AutoStrategy
 
 
 def print_banner():
@@ -185,7 +186,12 @@ def mode_trade():
     """Run the full trading bot."""
     print("\n🤖 TRADING BOT")
     print("="*60)
-    
+
+    if config.is_killed:
+        print("\n🛑 Kill switch is enabled (KILL_SWITCH=true).")
+        print("No NEW trades will be placed. Disable it to continue.")
+        return
+
     # Check credentials
     if not config.has_credentials:
         print("\n❌ Trading requires credentials!")
@@ -201,65 +207,26 @@ def mode_trade():
         print("\n⚠️ Configuration issues:")
         for issue in issues:
             print(f"  - {issue}")
-    
-    # Initialize components
-    fetcher = MarketFetcher()
-    portfolio = PortfolioManager()
-    trader = Trader(portfolio)
-    strategy = StrategyExecutor(trader)
-    tracker = OddsTracker()
-    
-    if not trader.is_ready:
-        print("\n❌ Failed to initialize trader")
-        return
-    
-    print("\n✅ Trading bot initialized!")
-    print(f"   Max trade size: ${config.trading.max_trade_size}")
-    print(f"   Max exposure: ${config.trading.max_total_exposure}")
-    print(f"   Min liquidity: ${config.trading.min_market_liquidity}")
-    
-    print("\n🔄 Starting trading loop...")
+
+    auto_config = AutoTradeConfig(
+        bankroll=config.trading.max_total_exposure,
+        max_bet_size=config.trading.max_trade_size,
+        min_liquidity=config.trading.min_market_liquidity,
+        strategy=AutoStrategy.MIXED,
+    )
+    bot = AutoTrader(config=auto_config)
+
+    print("\n✅ AutoTrader initialized (live mode)!")
+    print(f"   Max trade size: ${auto_config.max_bet_size}")
+    print(f"   Bankroll cap: ${auto_config.bankroll}")
+    print(f"   Min liquidity: ${auto_config.min_liquidity}")
+    print("\n🔄 Starting AutoTrader loop...")
     print("Press Ctrl+C to stop\n")
-    
+
     try:
-        while True:
-            # Fetch fresh markets
-            markets = fetcher.get_all_target_markets(
-                min_liquidity=config.trading.min_market_liquidity
-            )
-            
-            print(f"\n[{datetime.now().strftime('%H:%M:%S')}] Analyzing {len(markets)} markets...")
-            
-            # Update portfolio prices
-            portfolio.update_prices()
-            
-            # Check risk limits
-            warnings = portfolio.check_risk_limits()
-            if warnings:
-                for w in warnings:
-                    print(w)
-            
-            # Look for opportunities
-            # (In a real bot, you'd implement your strategy here)
-            
-            # Simple example: track top movers
-            for market in markets[:5]:
-                tracker.add_market(market.token_id_yes, market.question)
-            
-            tracker.update_prices()
-            
-            # Print summary
-            stats = portfolio.get_stats()
-            print(f"   Positions: {stats.total_positions}")
-            print(f"   Value: ${stats.total_value:,.2f}")
-            print(f"   P&L: ${stats.total_unrealized_pnl:,.2f}")
-            
-            # Wait before next iteration
-            time.sleep(60)
-            
+        bot.run()
     except KeyboardInterrupt:
         print("\n\n⏹️ Trading bot stopped")
-        portfolio.print_summary()
 
 
 def main():

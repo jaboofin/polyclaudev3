@@ -1199,14 +1199,16 @@ if __name__ == "__main__":
     logger.info('============================================================')
     logger.info("🤖 POLYMARKET AUTO TRADER")
     logger.info('============================================================')
-    logger.info("\nModes:")
+    logger.info("\nDemo presets (auto_trader.py):")
     logger.info("  1. scan      - Watch only, NO betting (safe preview)")
     logger.info("  2. conservative")
     logger.info("  3. balanced  - Recommended")
     logger.info("  4. aggressive")
     logger.info("  5. scalper   - Quick same-day trades")
     logger.info("  6. sports    - Tonight's games only 🏀")
-    logger.info()
+    logger.info("\nLive CLI mode:")
+    logger.info("  python main.py --mode trade")
+    logger.info("")
     
     try:
         bankroll = float(input("Enter bankroll amount [$50]: ") or "50")
