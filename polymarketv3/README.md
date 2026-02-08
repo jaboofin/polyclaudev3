@@ -149,10 +149,10 @@ The dashboard currently ships with these strategy presets:
 
 | Strategy | Take Profit % | Stop Loss % | Trailing Stop % |
 |----------|---------------|-------------|-----------------|
-| 🛡️ **Conservative** | 30 | 10 | — |
-| ⚖️ **Balanced** | 50 | 25 | — |
-| 🔥 **Aggressive** | 100 | 50 | — |
-| 📈 **Trailing Stop** | — | — | 20 |
+| 🛡️ **Conservative** | 15 | 5 | — |
+| ⚖️ **Balanced** | 25 | 10 | — |
+| 🔥 **Aggressive** | 40 | 20 | — |
+| 📈 **Trailing Stop** | — | — | 10 |
 | 🎯 **Custom** | user-defined | user-defined | user-defined |
 
 ---
@@ -177,13 +177,19 @@ PRIVATE_KEY=your_private_key_here
 FUNDER_ADDRESS=0xYourAddress
 
 # Trading limits
-MAX_TRADE_SIZE=10
-MAX_TOTAL_EXPOSURE=100
+MAX_TRADE_SIZE=5
+MAX_TOTAL_EXPOSURE=25
 ```
 
 Optional: override the database path:
 ```env
 BOT_DB_PATH=/path/to/custom/bot_data.db
+```
+
+Recommended first-run safety caps:
+```env
+MAX_DAILY_LOSS_USD=25
+MAX_DRAWDOWN_PCT=15
 ```
 
 ---
