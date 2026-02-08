@@ -22,6 +22,24 @@ import logging
 from logging.handlers import RotatingFileHandler
 
 
+class SafeStreamHandler(logging.StreamHandler):
+    """Stream handler that replaces unencodable characters on write."""
+
+    def emit(self, record: logging.LogRecord) -> None:
+        try:
+            msg = self.format(record)
+            stream = self.stream
+            if stream is None:
+                return
+            encoding = getattr(stream, "encoding", None)
+            if encoding:
+                msg = msg.encode(encoding, errors="replace").decode(encoding, errors="replace")
+            stream.write(msg + self.terminator)
+            self.flush()
+        except Exception:
+            self.handleError(record)
+
+
 LOG_FILE = os.getenv("BOT_LOG_FILE", "bot.log")
 LOG_LEVEL = os.getenv("BOT_LOG_LEVEL", "INFO").upper()
 LOG_MAX_BYTES = int(os.getenv("BOT_LOG_MAX_MB", "10")) * 1024 * 1024
@@ -54,12 +72,7 @@ def setup_logging(
     root.setLevel(logging.DEBUG)  # Capture everything; handlers filter
 
     # Console handler — clean, human-readable
-    for stream in (sys.stdout, sys.stderr):
-        try:
-            stream.reconfigure(errors="replace")
-        except AttributeError:
-            pass
-    console = logging.StreamHandler()
+    console = SafeStreamHandler()
     console.setLevel(getattr(logging, level, logging.INFO))
     console_fmt = logging.Formatter(
         "%(asctime)s [%(levelname)-5s] %(name)s: %(message)s",
